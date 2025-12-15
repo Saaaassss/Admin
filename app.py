@@ -1,0 +1,130 @@
+from flask import Flask, render_template, request, jsonify
+import json
+import os
+from flask import send_from_directory
+
+app = Flask(__name__)
+JSON_FILE = 'links.json'
+
+# Read links safely
+def read_links():
+    if not os.path.exists(JSON_FILE):
+        return {}
+    with open(JSON_FILE, 'r') as f:
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            return {}
+
+# Save links
+def save_links(links):
+    with open(JSON_FILE, 'w') as f:
+        json.dump(links, f, indent=4)
+
+# Add link to nested structure
+def add_link_to_json(new_link):
+    data = read_links()
+    category = new_link['category']
+    team = new_link['team']
+
+    if category not in data:
+        data[category] = {}
+    if team not in data[category]:
+        data[category][team] = []
+
+    data[category][team].append({
+        "url": new_link['url'],
+        "description": new_link['description']
+    })
+
+    save_links(data)
+
+# Home page
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+# API: get all links
+@app.route('/api/links', methods=['GET'])
+def get_links():
+    return jsonify(read_links())
+
+@app.route('/templates/<path:filename>')
+def serve_templates(filename):
+    return send_from_directory('templates', filename)
+
+# Serve images
+@app.route('/images/<path:filename>')
+def serve_images(filename):
+    return send_from_directory('images', filename)
+
+# API: add a new link
+@app.route('/api/links', methods=['POST'])
+def add_link():
+    new_link = request.json
+    add_link_to_json(new_link)
+    return jsonify({'status': 'success', 'message': 'Link added!'}), 201
+
+# API: delete a link
+@app.route('/api/links/delete', methods=['POST'])
+def delete_link():
+    data = request.json  # expects all 4 fields
+    links = read_links()
+    cat = data['category']
+    team = data['team']
+    url = data['url']
+    description = data['description']
+
+    if cat in links and team in links[cat]:
+        links[cat][team] = [l for l in links[cat][team] if not (l['url'] == url and l['description'] == description)]
+        if not links[cat][team]:
+            del links[cat][team]
+        if not links[cat]:
+            del links[cat]
+        save_links(links)
+    return jsonify({'status': 'success'}), 200
+
+# API: edit a link
+@app.route('/api/links/edit', methods=['POST'])
+def edit_link():
+    data = request.json
+    old_cat = data['old_category']
+    old_team = data['old_team']
+    old_url = data['old_url']
+    old_description = data['old_description']
+
+    new_cat = data['new_category']
+    new_team = data['new_team']
+    new_url = data['new_url']
+    new_description = data['new_description']
+
+    links = read_links()
+
+    # Find and remove old link
+    if old_cat in links and old_team in links[old_cat]:
+        found = None
+        for link in links[old_cat][old_team]:
+            if link['url'] == old_url and link['description'] == old_description:
+                found = link
+                break
+        if found:
+            links[old_cat][old_team].remove(found)
+            if not links[old_cat][old_team]:
+                del links[old_cat][old_team]
+            if not links[old_cat]:
+                del links[old_cat]
+
+            # Add new link to new category/team
+            if new_cat not in links:
+                links[new_cat] = {}
+            if new_team not in links[new_cat]:
+                links[new_cat][new_team] = []
+            links[new_cat][new_team].append({
+                "url": new_url,
+                "description": new_description
+            })
+            save_links(links)
+    return jsonify({'status': 'success'}), 200
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5001)
