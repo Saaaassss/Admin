@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jenkins</title>
+    <link rel="stylesheet" href="/templates/style.css" />
+</head>
+ 
+<body>
+    <div class="Jenkins-header">
+        <img src="/images/Jenkins.png" alt="Jenkins Logo" />
+    </div>
+ 
+    <div class="Jenkins-container" id="jenkinsContainer">
+        <!-- Jenkins links will be populated here -->
+    </div>
+ 
+    <script>
+        fetch("http://127.0.0.1:5000/api/data")
+            .then(res => res.json())
+            .then(data => {
+                let container = document.getElementById("jenkinsContainer");
+                let jenkinsData = data.Jenkins;
+ 
+                for (let team in jenkinsData) {
+                    let section = `<div class="team-section">
+                        <h3>${team}</h3>`;
+                    jenkinsData[team].forEach(item => {
+                        section += `
+                        <div class="link-item">
+                            <p>${item.description}</p>
+                            <a href="${item.url}" target="_blank">${item.url}</a>
+                        </div>`;
+                    });
+                    section += "</div>";
+                    container.innerHTML += section;
+                }
+            })
+            .catch(err => console.error("Error fetching Jenkins data:", err));
+    </script>
+ 
+    <script src="/static/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Artifactory</title>
+    <link rel="stylesheet" href="/templates/style.css" />
+</head>
+ 
+<body>
+    <div class="Artifactory-header">
+        <img src="/images/jfrog.png" alt="Artifactory Logo" />
+    </div>
+ 
+    <!-- FIXED: id must match what JS expects -->
+    <div class="Artifactory-container" id="artiContainer"></div>
+ 
+    <script>
+    fetch("http://127.0.0.1:5000/api/data")
+        .then(res => res.json())
+        .then(data => {
+            let container = document.getElementById("artiContainer");
+            let artiData = data.Artifactory;
+ 
+            for (let team in artiData) {
+                let section = `<div class="team-section">
+                    <h3>${team}</h3>`;
+                artiData[team].forEach(item => {
+                    section += `
+                    <div class="link-item">
+                        <p>${item.description}</p>
+                        <a href="${item.url}" target="_blank">${item.url}</a>
+                    </div>`;
+                });
+                section += "</div>";
+                container.innerHTML += section;
+            }
+        });
+    </script>
+ 
+    <script src="/static/script.js"></script>
+</body>
+</html>
